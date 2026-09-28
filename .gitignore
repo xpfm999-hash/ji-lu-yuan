@@ -1,0 +1,13 @@
+work/
+build/
+dist/
+__pycache__/
+*.pyc
+*.spec
+*.tmp
+*.log
+*.db
+*.sqlite
+*.sqlite3
+.env
+source/Ji Lu Yuan.exe

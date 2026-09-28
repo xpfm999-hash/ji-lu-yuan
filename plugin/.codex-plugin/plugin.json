@@ -1,0 +1,36 @@
+{
+  "name": "ji-lu-yuan",
+  "version": "0.3.1+codex.20260928100000",
+  "description": "\u5c06\u5fae\u4fe1\u3001Instagram \u548c\u666e\u901a\u804a\u5929\u5bfc\u51fa\u6574\u7406\u4e3a GPT \u53ef\u7528\u683c\u5f0f\uff0c\u5e76\u6309\u4f1a\u8bdd\u9694\u79bb\u8bb0\u5f55\u3002",
+  "author": {
+    "name": "Ji Lu Yuan"
+  },
+  "license": "MIT",
+  "keywords": [
+    "chat",
+    "export",
+    "gpt",
+    "wechat",
+    "instagram",
+    "media"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "记录员",
+    "shortDescription": "\u5bfc\u51fa\u5e76\u9694\u79bb\u5fae\u4fe1\u3001Instagram \u804a\u5929\u8bb0\u5f55\u3002",
+    "longDescription": "\u652f\u6301\u5fae\u4fe1\u672c\u5730\u6570\u636e\u3001Instagram \u6570\u636e\u4e0b\u8f7d\u548c\u666e\u901a JSON/TXT/HTML/CSV \u804a\u5929\u6587\u4ef6\uff0c\u4fdd\u7559\u65f6\u95f4\u3001\u53d1\u9001\u8005\u3001\u4f1a\u8bdd ID \u548c\u5a92\u4f53\u5360\u4f4d\u7b26\uff0c\u53bb\u9664\u8de8\u5206\u9875\u91cd\u590d\uff0c\u5e76\u751f\u6210 GPT JSON\u3001JSONL\u3001Markdown \u548c\u5b8c\u6574\u6027\u62a5\u544a\u3002",
+    "developerName": "Ji Lu Yuan",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Transform",
+      "Write"
+    ],
+    "brandColor": "#2563EB",
+    "defaultPrompt": [
+      "\u628a Instagram \u5bfc\u51fa\u8bb0\u5f55\u6309\u4f1a\u8bdd\u6574\u7406\u6210 GPT \u683c\u5f0f",
+      "\u5bfc\u51fa\u6307\u5b9a\u5fae\u4fe1\u4f1a\u8bdd\u5e76\u68c0\u67e5\u662f\u5426\u4e32\u5165\u5176\u4ed6\u8054\u7cfb\u4eba",
+      "\u68c0\u67e5\u804a\u5929\u5bfc\u51fa\u662f\u5426\u6709\u91cd\u590d\u6216\u672a\u89e3\u6790\u8bb0\u5f55"
+    ]
+  }
+}
