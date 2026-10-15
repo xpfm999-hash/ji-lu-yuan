@@ -19,6 +19,7 @@ internal sealed class ExportSettings
     public string TranscriptMap;
     public string Transcriber;
     public bool CopyMedia;
+    public bool AllConversations;
 }
 
 internal sealed class ExportResult
@@ -27,6 +28,12 @@ internal sealed class ExportResult
     public string Stdout;
     public string Stderr;
     public string OutputDir;
+    public bool AllConversations;
+    public bool ValidationFailed;
+    public string ValidationMessage;
+    public ConversationAudit Audit;
+    public DateTime ExportStartedUtc;
+    public string DirectionSummary;
 }
 
 internal sealed class MainForm : Form
@@ -39,6 +46,8 @@ internal sealed class MainForm : Form
     private readonly TextBox transcriptMapBox = new TextBox();
     private readonly TextBox transcriberBox = new TextBox();
     private readonly CheckBox copyMediaBox = new CheckBox();
+    private readonly CheckBox allConversationsBox = new CheckBox();
+    private readonly ToolTip roleHelp = new ToolTip();
     private readonly TextBox logBox = new TextBox();
     private readonly Label statusLabel = new Label();
     private readonly Button exportButton = new Button();
@@ -47,7 +56,7 @@ internal sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "\u8bb0\u5f55\u5458 - \u804a\u5929\u8bb0\u5f55\u5bfc\u51fa\u5668";
+        Text = "\u8bb0\u5f55\u5458 v0.3.3 - \u804a\u5929\u8bb0\u5f55\u5bfc\u51fa\u5668";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(760, 600);
         Size = new Size(1050, 720);
@@ -65,7 +74,7 @@ internal sealed class MainForm : Form
 
         int row = 0;
         Label title = new Label();
-        title.Text = "\u8bb0\u5f55\u5458 - \u804a\u5929\u8bb0\u5f55\u5bfc\u51fa\u5668";
+        title.Text = "\u8bb0\u5f55\u5458 v0.3.3 - \u804a\u5929\u8bb0\u5f55\u5bfc\u51fa\u5668";
         title.Font = new Font(Font, FontStyle.Bold);
         title.Font = new Font(title.Font.FontFamily, 18F, FontStyle.Bold);
         title.AutoSize = true;
@@ -74,7 +83,7 @@ internal sealed class MainForm : Form
         row++;
 
         Label description = new Label();
-        description.Text = "\u53ef\u76f4\u63a5\u9009\u62e9\u7535\u8111\u5fae\u4fe1\u6216 Instagram \u6570\u636e\u6587\u4ef6\u5939\uff0c\u4e00\u6b21\u5bfc\u51fa GPT \u6587\u4ef6\u3001\u539f\u59cb\u5f52\u6863\u3001\u5a92\u4f53\u6587\u4ef6\u548c\u5b8c\u6574\u6027\u62a5\u544a\u3002\u4e5f\u53ef\u8bfb\u53d6 TXT/JSON/HTML \u7b49\u5df2\u5bfc\u51fa\u6587\u4ef6\u3002\u5fae\u4fe1 4.x \u8bf7\u4fdd\u6301 Weixin.exe \u5df2\u767b\u5f55\uff1b\u5fae\u4fe1\u672a\u6307\u5b9a\u4f1a\u8bdd\u65f6\u4f1a\u5148\u63d0\u793a\uff0c\u9632\u6b62\u4e32\u5165\u5176\u4ed6\u8054\u7cfb\u4eba\u3002";
+        description.Text = "\u53ef\u76f4\u63a5\u9009\u62e9\u7535\u8111\u5fae\u4fe1\u6216 Instagram \u6570\u636e\u6587\u4ef6\u5939\uff0c\u4e00\u6b21\u5bfc\u51fa GPT \u6587\u4ef6\u3001\u539f\u59cb\u5f52\u6863\u3001\u5a92\u4f53\u6587\u4ef6\u548c\u5b8c\u6574\u6027\u62a5\u544a\u3002\u5fae\u4fe1\u5355\u804a\u8bf7\u586b\u51c6\u786e\u4f1a\u8bdd\u540d\u6216\u4f1a\u8bdd ID\uff1b\u5168\u4f1a\u8bdd\u5bfc\u51fa\u9700\u5355\u72ec\u52fe\u9009\u786e\u8ba4\u3002\u5bfc\u51fa\u540e\u4f1a\u6838\u5bf9\u4f1a\u8bdd ID\u5e76\u5355\u72ec\u7edf\u8ba1\u7cfb\u7edf\u4e8b\u4ef6\u3002\u586b\u5199\u6211\u65b9\u53d1\u8a00\u8005\u540d\u79f0\u624d\u4f1a\u81ea\u52a8\u6807\u6ce8\u6536\u53d1\u65b9\u5411\uff1b\u591a\u4e2a\u5386\u53f2\u6635\u79f0\u7528\u82f1\u6587\u9017\u53f7\u5206\u9694\u3002";
         description.AutoSize = true;
         description.MaximumSize = new Size(780, 0);
         root.Controls.Add(description, 0, row);
@@ -83,9 +92,16 @@ internal sealed class MainForm : Form
 
         AddField(root, ref row, "\u804a\u5929\u6587\u4ef6/\u6587\u4ef6\u5939", inputBox, MakeInputButtons());
         AddField(root, ref row, "\u8f93\u51fa\u76ee\u5f55\uff08\u53ef\u9009\uff09", outputBox, new Button[] { MakeButton("\u9009\u62e9\u76ee\u5f55", ChooseOutputFolder) });
-        AddField(root, ref row, "\u6307\u5b9a\u4f1a\u8bdd\uff08\u53ef\u9009\uff09", conversationBox, new Button[0]);
+        AddField(root, ref row, "\u6307\u5b9a\u4f1a\u8bdd\u540d/ID", conversationBox, new Button[0]);
 
-        Label roleLabel = MakeLabel("\u89d2\u8272\u6620\u5c04\uff08\u53ef\u9009\uff09");
+        allConversationsBox.Text = "\u6211\u786e\u8ba4\u8981\u5bfc\u51fa\u5168\u90e8\u5fae\u4fe1\u4f1a\u8bdd\uff08\u5305\u542b\u5176\u4ed6\u8054\u7cfb\u4eba\uff09";
+        allConversationsBox.AutoSize = true;
+        allConversationsBox.Checked = false;
+        root.Controls.Add(allConversationsBox, 1, row);
+        root.SetColumnSpan(allConversationsBox, 2);
+        row++;
+
+        Label roleLabel = MakeLabel("GPT\u89d2\u8272\u6620\u5c04\uff08\u53ef\u9009\uff09");
         root.Controls.Add(roleLabel, 0, row);
         TableLayoutPanel roles = new TableLayoutPanel();
         roles.Dock = DockStyle.Fill;
@@ -95,10 +111,12 @@ internal sealed class MainForm : Form
         roles.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
         roles.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         roles.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-        roles.Controls.Add(MakeLabel("\u6211\u7684\u540d\u79f0"), 0, 0);
+        roles.Controls.Add(MakeLabel("\u6211\u65b9\u53d1\u8a00\u8005"), 0, 0);
         roles.Controls.Add(userSpeakerBox, 1, 0);
-        roles.Controls.Add(MakeLabel("\u5bf9\u65b9\u540d\u79f0"), 2, 0);
+        roles.Controls.Add(MakeLabel("\u5bf9\u65b9\u53d1\u8a00\u8005"), 2, 0);
         roles.Controls.Add(assistantSpeakerBox, 3, 0);
+        roleHelp.SetToolTip(userSpeakerBox, "\u586b\u5bfc\u51fa\u4e2d\u6211\u65b9\u53d1\u8a00\u8005\u7684\u539f\u59cb\u6635\u79f0\uff1b\u591a\u4e2a\u5386\u53f2\u6635\u79f0\u7528\u82f1\u6587\u9017\u53f7\u5206\u9694\uff08\u4f8b\u5982 name1,name2\uff09\u3002\u7528\u4e8e\u6807\u6ce8\u53d1\u9001/\u6536\u5230\u65b9\u5411\uff1b\u4e0d\u586b\u5c31\u4e0d\u731c\u65b9\u5411\u3002\u4e0d\u4f1a\u6539\u5199\u539f\u59cb\u53d1\u8a00\u8005\u5b57\u6bb5\u3002");
+        roleHelp.SetToolTip(assistantSpeakerBox, "\u586b\u5bfc\u51fa\u8bb0\u5f55\u4e2d\u5bf9\u65b9\u53d1\u8a00\u8005\u7684\u6635\u79f0\uff1b\u53ea\u7528\u4e8e GPT user/assistant \u89d2\u8272\u6620\u5c04\uff0c\u4e0d\u4f1a\u6539\u5199\u539f\u59cb\u53d1\u8a00\u8005\u5b57\u6bb5\u3002");
         root.Controls.Add(roles, 1, row);
         root.SetColumnSpan(roles, 2);
         row++;
@@ -303,20 +321,28 @@ internal sealed class MainForm : Form
         settings.TranscriptMap = transcriptMapBox.Text.Trim();
         settings.Transcriber = transcriberBox.Text.Trim();
         settings.CopyMedia = copyMediaBox.Checked;
-
-        if (LooksLikeWeChatInput(input) && String.IsNullOrWhiteSpace(settings.Conversation))
+        bool wechatInput = LooksLikeWeChatInput(input);
+        settings.AllConversations = wechatInput && allConversationsBox.Checked;
+        if (wechatInput && String.IsNullOrWhiteSpace(settings.Conversation) && !settings.AllConversations)
         {
-            DialogResult decision = MessageBox.Show(this, "你没有填写指定会话。继续将导出这个微信目录下的全部会话，可能包含其他联系人的聊天记录。\n\n选择“否”返回填写会话名称。", "防止串聊", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
-            if (decision != DialogResult.Yes)
-            {
-                statusLabel.Text = "请填写指定会话后再导出";
-                return;
-            }
-            AppendLog("警告：未指定微信会话，本次将导出全部会话。");
+            MessageBox.Show(this, "\u8bf7\u586b\u5199\u51c6\u786e\u7684\u4f1a\u8bdd\u540d\u6216\u4f1a\u8bdd ID\u3002\u5982\u679c\u786e\u5b9e\u9700\u8981\u5bfc\u51fa\u5168\u90e8\u804a\u5929\uff0c\u8bf7\u5148\u52fe\u9009\u201c\u6211\u786e\u8ba4\u8981\u5bfc\u51fa\u5168\u90e8\u5fae\u4fe1\u4f1a\u8bdd\u201d\u3002", "\u8bf7\u6307\u5b9a\u4f1a\u8bdd", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            statusLabel.Text = "\u8bf7\u586b\u4f1a\u8bdd\u540d/ID\uff0c\u6216\u663e\u5f0f\u9009\u62e9\u5168\u91cf\u5bfc\u51fa";
+            return;
+        }
+        if (wechatInput && !String.IsNullOrWhiteSpace(settings.Conversation) && settings.AllConversations)
+        {
+            MessageBox.Show(this, "\u201c\u5355\u4e2a\u4f1a\u8bdd\u201d\u548c\u201c\u5168\u90e8\u4f1a\u8bdd\u201d\u4e0d\u80fd\u540c\u65f6\u9009\u62e9\u3002\u8bf7\u6e05\u7a7a\u4f1a\u8bdd\u6846\u6216\u53d6\u6d88\u5168\u91cf\u9009\u9879\u3002", "\u9009\u9879\u51b2\u7a81", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        if (wechatInput && settings.AllConversations)
+        {
+            DialogResult decision = MessageBox.Show(this, "\u672c\u6b21\u4f1a\u5bfc\u51fa\u8fd9\u4e2a\u5fae\u4fe1\u8d26\u53f7\u7684\u5168\u90e8\u4f1a\u8bdd\uff0c\u53ef\u80fd\u5305\u542b\u5927\u91cf\u5176\u4ed6\u8054\u7cfb\u4eba\u3002\u5bfc\u51fa\u540e\u4ecd\u4f1a\u6309\u4f1a\u8bdd ID \u68c0\u67e5\uff0c\u4f46\u4e0d\u80fd\u628a\u5168\u91cf\u6587\u4ef6\u5f53\u6210\u5355\u4eba\u79c1\u804a\u3002\n\n\u8981\u7ee7\u7eed\u5417\uff1f", "\u660e\u786e\u786e\u8ba4\u5168\u91cf\u5bfc\u51fa", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+            if (decision != DialogResult.Yes) return;
         }
 
         SetBusy(true);
         AppendLog("\u5f00\u59cb\u5904\u7406\uff1a" + input);
+        if (wechatInput) AppendLog("\u5bfc\u51fa\u540e\u5c06\u9010\u6761\u6838\u9a8c\u4f1a\u8bdd ID\uff1b\u5927\u578b\u8bb0\u5f55\u9700\u8981\u4e00\u4e9b\u626b\u63cf\u65f6\u95f4\u3002");
         Task.Run(delegate { return RunExporter(settings); }).ContinueWith(delegate(Task<ExportResult> task)
         {
             BeginInvoke((Action)delegate
@@ -353,20 +379,34 @@ internal sealed class MainForm : Form
         {
             AppendLog("\u672a\u89e3\u5bc6\u6570\u636e\u5e93\uff1a" + protectedDatabases + " \uff08\u672a\u9759\u9ed8\u4e22\u5931\uff09");
         }
-        AppendLog("\u5b8c\u6574\u6027\uff1a" + (result.ExitCode == 0 ? "\u5b8c\u6210" : "\u90e8\u5206\u5b8c\u6210\uff0c\u8bf7\u67e5\u770b export_manifest.json"));
+        if (result.Audit != null)
+        {
+            AppendLog("\u4f1a\u8bdd ID \u6570\uff1a" + result.Audit.Conversations.Count + "\uff1b\u6d88\u606f\u6570\uff1a" + result.Audit.MessageCount + "\uff1b\u7cfb\u7edf\u4e8b\u4ef6\uff08\u4e0d\u7b97\u4f5c\u4eba\u5458\uff09\uff1a" + result.Audit.SystemMessageCount);
+            AppendLog("\u4f1a\u8bdd\u6838\u9a8c\u62a5\u544a\uff1aconversation_audit.json");
+        }
+        if (!String.IsNullOrWhiteSpace(result.DirectionSummary)) AppendLog("\u6536\u53d1\u65b9\u5411\uff1a" + result.DirectionSummary);
+        if (!String.IsNullOrWhiteSpace(result.ValidationMessage)) AppendLog("\u6838\u9a8c\u63d0\u793a\uff1a" + result.ValidationMessage);
+        bool complete = result.ExitCode == 0 && !result.ValidationFailed;
+        AppendLog("\u5b8c\u6574\u6027\uff1a" + (complete ? "\u5b8c\u6210" : "\u672a\u901a\u8fc7\u6838\u9a8c\uff0c\u8bf7\u5148\u9605\u8bfb\u63d0\u793a\u548c conversation_audit.json"));
         if (!String.IsNullOrWhiteSpace(result.Stderr))
         {
             AppendLog(result.Stderr.Trim());
         }
-        if (result.ExitCode == 0)
+        if (complete)
         {
-            statusLabel.Text = "\u5bfc\u51fa\u5b8c\u6210";
-            MessageBox.Show(this, "\u5df2\u751f\u6210 GPT \u6587\u4ef6\u548c\u5b8c\u6574\u5f52\u6863\uff1a\n" + lastOutputDir, "\u5bfc\u51fa\u5b8c\u6210", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            statusLabel.Text = result.AllConversations ? "\u5df2\u5bfc\u51fa\u5168\u90e8\u4f1a\u8bdd" : "\u5355\u4f1a\u8bdd\u6821\u9a8c\u901a\u8fc7";
+            string message = result.AllConversations
+                ? "\u5df2\u5bfc\u51fa\u5168\u90e8\u4f1a\u8bdd\uff08" + result.Audit.Conversations.Count + " \u4e2a\u4f1a\u8bdd ID\uff09\u3002\u8bf7\u52ff\u628a\u8fd9\u4e2a\u5168\u91cf\u6587\u4ef6\u5f53\u6210\u5355\u4eba\u804a\u5929\u3002\n\n" + lastOutputDir
+                : "\u5df2\u786e\u8ba4\u8f93\u51fa\u53ea\u5305\u542b 1 \u4e2a\u4f1a\u8bdd ID\u3002\n\n" + lastOutputDir;
+            if (!String.IsNullOrWhiteSpace(result.DirectionSummary)) message = message.Replace("\n\n" + lastOutputDir, "\n\n" + result.DirectionSummary + "\n\n" + lastOutputDir);
+            else if (result.Audit != null) message = message.Replace("\n\n" + lastOutputDir, "\n\n\u6536\u53d1\u65b9\u5411\u672a\u6807\u6ce8\uff08\u6211\u65b9\u53d1\u8a00\u8005\u672a\u8bbe\u7f6e\uff09\u3002\n\n" + lastOutputDir);
+            MessageBox.Show(this, message, result.AllConversations ? "\u5168\u91cf\u5bfc\u51fa\u5b8c\u6210" : "\u5355\u4f1a\u8bdd\u6838\u9a8c\u901a\u8fc7", MessageBoxButtons.OK, result.AllConversations ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
         }
         else
         {
-            statusLabel.Text = "\u90e8\u5206\u5b8c\u6210";
-            MessageBox.Show(this, "\u7ed3\u679c\u5df2\u4fdd\u5b58\uff0c\u4f46\u6709\u6587\u4ef6\u672a\u80fd\u89e3\u6790\uff1a\n" + lastOutputDir, "\u8bf7\u68c0\u67e5\u5b8c\u6574\u6027", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            statusLabel.Text = result.ValidationFailed ? "\u4f1a\u8bdd\u6838\u9a8c\u672a\u901a\u8fc7" : "\u90e8\u5206\u5b8c\u6210";
+            string detail = String.IsNullOrWhiteSpace(result.ValidationMessage) ? "\u8bf7\u67e5\u770b export_manifest.json\u3002" : result.ValidationMessage;
+            MessageBox.Show(this, "\u7ed3\u679c\u5df2\u4fdd\u5b58\uff0c\u4f46\u672a\u80fd\u786e\u8ba4\u4f1a\u8bdd\u8303\u56f4\u3002\u8bf7\u52ff\u628a\u8fd9\u4efd\u7ed3\u679c\u4f5c\u4e3a\u5355\u4eba\u804a\u5929\u4f7f\u7528\u3002\n\n" + detail + "\n\n" + lastOutputDir, "\u4f1a\u8bdd\u6838\u9a8c\u5931\u8d25", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 
@@ -403,7 +443,8 @@ internal sealed class MainForm : Form
         }
         AddArgumentIfPresent(args, "--output-dir", settings.OutputDir);
         AddArgumentIfPresent(args, "--conversation", settings.Conversation);
-        AddArgumentIfPresent(args, "--user-speaker", settings.UserSpeaker);
+        string[] userSpeakers = SplitSpeakerNames(settings.UserSpeaker);
+        if (userSpeakers.Length == 1) AddArgumentIfPresent(args, "--user-speaker", userSpeakers[0]);
         AddArgumentIfPresent(args, "--assistant-speaker", settings.AssistantSpeaker);
         AddArgumentIfPresent(args, "--transcript-map", settings.TranscriptMap);
         AddArgumentIfPresent(args, "--transcriber", settings.Transcriber);
@@ -421,6 +462,7 @@ internal sealed class MainForm : Form
         startInfo.RedirectStandardError = true;
         startInfo.StandardOutputEncoding = Encoding.UTF8;
         startInfo.StandardErrorEncoding = Encoding.UTF8;
+        DateTime exportStartedUtc = DateTime.UtcNow;
         using (Process process = Process.Start(startInfo))
         {
             if (process == null)
@@ -430,13 +472,164 @@ internal sealed class MainForm : Form
             string stdout = process.StandardOutput.ReadToEnd();
             string stderr = process.StandardError.ReadToEnd();
             process.WaitForExit();
-            return new ExportResult
+            ExportResult result = new ExportResult
             {
                 ExitCode = process.ExitCode,
                 Stdout = stdout,
                 Stderr = stderr,
-                OutputDir = ExtractJsonString(stdout, "output_dir") ?? DefaultOutputDir(settings.Input, settings.OutputDir)
+                OutputDir = ExtractJsonString(stdout, "output_dir") ?? DefaultOutputDir(settings.Input, settings.OutputDir),
+                AllConversations = settings.AllConversations,
+                ExportStartedUtc = exportStartedUtc
             };
+            if (LooksLikeWeChatInput(settings.Input))
+            {
+                AuditWeChatResult(result, settings);
+                if (!result.ValidationFailed)
+                {
+                    string[] configuredUserSpeakers = SplitSpeakerNames(settings.UserSpeaker);
+                    if (configuredUserSpeakers.Length == 0)
+                    {
+                        RunDirectionEnricher(result, settings);
+                    }
+                    else if (CanUseLegacyDirectionEnricher(result, settings))
+                    {
+                        RunDirectionEnricher(result, settings);
+                    }
+                    else
+                    {
+                        result.ValidationMessage = "已跳过旧版逐条方向标注：全量导出、群聊或含系统通知时，旧模块会把不同会话/系统事件误当普通收件人。请以按会话 ID 分开的 conversation_index.json 和 conversation_summary.csv 为准。";
+                    }
+                }
+                if (result.Audit != null)
+                {
+                    ConversationAuditor.WriteReports(result.OutputDir, result.Audit, settings.Conversation, settings.AllConversations);
+                    result.DirectionSummary = result.Audit.DirectionConfigured
+                        ? "我方发出 " + result.Audit.OutgoingCount + " 条，私聊收到 " + result.Audit.IncomingCount + " 条，群聊/其他会话他人发言 " + result.Audit.OtherSpeakerCount + " 条，未能识别 " + result.Audit.UnknownCount + " 条（系统事件已排除）"
+                        : "方向未推断：未配置我方昵称；系统事件已排除，人物统计按会话 ID 分开";
+                }
+            }
+            return result;
+        }
+    }
+
+    private static void RunDirectionEnricher(ExportResult result, ExportSettings settings)
+    {
+        string[] userSpeakers = SplitSpeakerNames(settings.UserSpeaker);
+        if (userSpeakers.Length == 0)
+        {
+            result.ValidationMessage = "\u672a\u586b\u6211\u65b9\u53d1\u8a00\u8005\u540d\u79f0\uff0c\u4e3a\u907f\u514d\u8bef\u6807\u6536\u53d1\u65b9\uff0c\u672c\u6b21\u4fdd\u7559\u539f\u59cb\u53d1\u8a00\u8005\u5e76\u8df3\u8fc7\u65b9\u5411\u63a8\u65ad\u3002";
+            return;
+        }
+
+        string helperPath = EnsureDirectionEnricher();
+        List<string> args = new List<string>();
+        AddArgument(args, "--output-dir", result.OutputDir);
+        AddArgument(args, "--user-speaker", String.Join(",", userSpeakers));
+        ProcessStartInfo startInfo = new ProcessStartInfo();
+        startInfo.FileName = helperPath;
+        startInfo.Arguments = String.Join(" ", args.ToArray());
+        startInfo.UseShellExecute = false;
+        startInfo.CreateNoWindow = true;
+        startInfo.RedirectStandardOutput = true;
+        startInfo.RedirectStandardError = true;
+        startInfo.StandardOutputEncoding = Encoding.UTF8;
+        startInfo.StandardErrorEncoding = Encoding.UTF8;
+        using (Process process = Process.Start(startInfo))
+        {
+            if (process == null) throw new InvalidOperationException("\u65e0\u6cd5\u542f\u52a8\u53d1\u8a00\u65b9\u5411\u6807\u6ce8\u5668\u3002");
+            string stdout = process.StandardOutput.ReadToEnd();
+            string stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            string status = ExtractJsonString(stdout, "status");
+            if (process.ExitCode != 0 || !String.Equals(status, "complete", StringComparison.OrdinalIgnoreCase))
+            {
+                result.ValidationFailed = true;
+                result.ValidationMessage = "\u65b9\u5411\u6807\u6ce8\u5931\u8d25\uff1a" + (String.IsNullOrWhiteSpace(stderr) ? stdout.Trim() : stderr.Trim());
+                return;
+            }
+            string outgoing = ExtractSummaryValue(stdout, "outgoing_count");
+            string incoming = ExtractSummaryValue(stdout, "incoming_count");
+            string unknown = ExtractSummaryValue(stdout, "unknown_count");
+            result.DirectionSummary = "\u6211\u65b9\u53d1\u51fa " + outgoing + " \u6761\uff0c\u6536\u5230 " + incoming + " \u6761\uff0c\u672a\u77e5 " + unknown + " \u6761";
+            if (!String.IsNullOrWhiteSpace(stderr)) result.ValidationMessage = stderr.Trim();
+        }
+    }
+
+    private static bool CanUseLegacyDirectionEnricher(ExportResult result, ExportSettings settings)
+    {
+        if (settings.AllConversations || result.Audit == null || result.Audit.SystemMessageCount > 0 || result.Audit.Conversations.Count != 1)
+            return false;
+        foreach (ConversationAuditGroup group in result.Audit.Conversations.Values)
+            return String.Equals(group.ConversationType, "private", StringComparison.OrdinalIgnoreCase);
+        return false;
+    }
+
+    private static string[] SplitSpeakerNames(string names)
+    {
+        if (String.IsNullOrWhiteSpace(names)) return new string[0];
+        List<string> result = new List<string>();
+        foreach (string name in names.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            string trimmed = name.Trim();
+            if (trimmed.Length > 0 && !result.Contains(trimmed)) result.Add(trimmed);
+        }
+        return result.ToArray();
+    }
+
+    private static void AuditWeChatResult(ExportResult result, ExportSettings settings)
+    {
+        string transcriptPath = Path.Combine(result.OutputDir, "lossless_transcript.json");
+        if (!File.Exists(transcriptPath))
+        {
+            result.ValidationFailed = true;
+            result.ValidationMessage = "\u627e\u4e0d\u5230 lossless_transcript.json\uff0c\u65e0\u6cd5\u6838\u9a8c\u4f1a\u8bdd ID\u3002";
+            return;
+        }
+        if (File.GetLastWriteTimeUtc(transcriptPath) < result.ExportStartedUtc.AddSeconds(-3))
+        {
+            result.ValidationFailed = true;
+            result.ValidationMessage = "\u8f93\u51fa\u76ee\u5f55\u4e2d\u7684 lossless_transcript.json \u6ca1\u6709\u5728\u672c\u6b21\u8fd0\u884c\u65f6\u66f4\u65b0\uff0c\u4e3a\u907f\u514d\u628a\u4e0a\u6b21\u5bfc\u51fa\u8bef\u5f53\u6210\u672c\u6b21\u7ed3\u679c\uff0c\u5df2\u4e2d\u6b62\u901a\u8fc7\u3002";
+            return;
+        }
+
+        try
+        {
+            result.Audit = ConversationAuditor.Inspect(transcriptPath, SplitSpeakerNames(settings.UserSpeaker));
+            ConversationAuditor.WriteReports(result.OutputDir, result.Audit, settings.Conversation, settings.AllConversations);
+
+            if (result.Audit.MessageCount == 0)
+            {
+                result.ValidationFailed = true;
+                result.ValidationMessage = "\u5f52\u6863\u4e2d\u6ca1\u6709\u53ef\u6838\u9a8c\u7684\u6d88\u606f\u3002";
+            }
+            else if (result.Audit.MissingConversationIdCount > 0)
+            {
+                result.ValidationFailed = true;
+                result.ValidationMessage = "\u6709 " + result.Audit.MissingConversationIdCount + " \u6761\u6d88\u606f\u7f3a\u5c11\u4f1a\u8bdd ID\uff0c\u8fd9\u4efd\u5bfc\u51fa\u4e0d\u9002\u5408\u5f53\u4f5c\u5355\u4eba\u804a\u5929\u5206\u6790\u3002";
+            }
+            else if (settings.AllConversations)
+            {
+                if (!String.IsNullOrWhiteSpace(settings.Conversation))
+                {
+                    result.ValidationFailed = true;
+                    result.ValidationMessage = "\u5168\u91cf\u6a21\u5f0f\u4e0b\u4e0d\u5e94\u8bbe\u7f6e\u5355\u4e2a\u4f1a\u8bdd\u7b5b\u9009\u6761\u4ef6\u3002";
+                }
+            }
+            else if (result.Audit.Conversations.Count != 1)
+            {
+                result.ValidationFailed = true;
+                result.ValidationMessage = "\u8f93\u5165\u4e86\u5355\u4e2a\u4f1a\u8bdd\uff0c\u4f46\u8f93\u51fa\u5305\u542b " + result.Audit.Conversations.Count + " \u4e2a\u4e0d\u540c\u4f1a\u8bdd ID\uff1b\u5efa\u8bae\u6539\u7528\u552f\u4e00\u4f1a\u8bdd ID \u91cd\u8bd5\u3002";
+            }
+            else if (!result.Audit.ContainsRequestedConversation(settings.Conversation))
+            {
+                result.ValidationFailed = true;
+                result.ValidationMessage = "\u8f93\u51fa\u4f1a\u8bdd\u540d/ID \u4e0e\u8f93\u5165\u7b5b\u9009\u6761\u4ef6\u4e0d\u4e00\u81f4\uff1b\u8bf7\u4f7f\u7528\u5b8c\u6574\u7684\u4f1a\u8bdd\u663e\u793a\u540d\u6216\u4f1a\u8bdd ID\u3002";
+            }
+        }
+        catch (Exception exception)
+        {
+            result.ValidationFailed = true;
+            result.ValidationMessage = "\u626b\u63cf\u4f1a\u8bdd\u5f52\u6863\u65f6\u51fa\u9519\uff1a" + exception.Message;
         }
     }
 
@@ -518,6 +711,32 @@ internal sealed class MainForm : Form
         return target;
     }
 
+    private static string EnsureDirectionEnricher()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "ChatHistoryGPTExporter");
+        Directory.CreateDirectory(tempDir);
+        string target = Path.Combine(tempDir, "DirectionEnricher.exe");
+        using (Stream resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("DirectionEnricher.exe"))
+        {
+            if (resource == null)
+            {
+                throw new FileNotFoundException("\u5e94\u7528\u5305\u4e2d\u6ca1\u6709\u53d1\u8a00\u65b9\u5411\u6807\u6ce8\u5668\u3002");
+            }
+            if (!File.Exists(target) || new FileInfo(target).Length != resource.Length)
+            {
+                resource.Position = 0;
+                string temporary = target + ".tmp";
+                using (FileStream output = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    resource.CopyTo(output);
+                }
+                File.Copy(temporary, target, true);
+                File.Delete(temporary);
+            }
+        }
+        return target;
+    }
+
     private static string EnsureInstagramBridge()
     {
         string tempDir = Path.Combine(Path.GetTempPath(), "ChatHistoryGPTExporter");
@@ -550,7 +769,26 @@ internal sealed class MainForm : Form
         {
             return false;
         }
-        return Directory.Exists(Path.Combine(input, "db_storage")) || Directory.Exists(Path.Combine(input, "Msg")) || Directory.Exists(Path.Combine(input, "msg"));
+        if (HasWeChatDatabaseFolder(input)) return true;
+        try
+        {
+            foreach (string child in Directory.GetDirectories(input, "*", SearchOption.TopDirectoryOnly))
+            {
+                if (HasWeChatDatabaseFolder(child)) return true;
+                foreach (string nested in Directory.GetDirectories(child, "*", SearchOption.TopDirectoryOnly))
+                {
+                    if (HasWeChatDatabaseFolder(nested)) return true;
+                }
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+        return false;
+    }
+
+    private static bool HasWeChatDatabaseFolder(string root)
+    {
+        return Directory.Exists(Path.Combine(root, "db_storage")) || Directory.Exists(Path.Combine(root, "Msg")) || Directory.Exists(Path.Combine(root, "msg"));
     }
 
     private static bool LooksLikeInstagramInput(string input)
